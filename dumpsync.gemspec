@@ -8,8 +8,9 @@ Gem::Specification.new do |spec|
   spec.version       = Dumpsync::VERSION
   spec.authors       = ["Resonious"]
   spec.email         = ["metreckk@gmail.com"]
-  spec.summary       = %q{TODO: Write a short summary. Required.}
-  spec.description   = %q{TODO: Write a longer description. Optional.}
+  spec.summary       = %q{Dump from remote, sync to local.}
+  spec.description   = %q{Quick rake task for running mysqldump on a remote database,
+                          then loading it into your app's database.}
   spec.homepage      = ""
   spec.license       = "MIT"
 
