@@ -27,7 +27,7 @@ module Dumpsync
     " #{db.database} > #{dump_file}"
   end
 
-  def symc_cmd(db, dump_file = nil)
+  def sync_cmd(db, dump_file = nil)
     dump_file ||= default_dump_file
 
     "mysql -u #{db.username} -p#{db.password} "\
