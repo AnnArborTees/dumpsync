@@ -1,4 +1,5 @@
 require "dumpsync/version"
+require 'dumpsync/railtie' if defined?(Rails::Railtie)
 
 module Dumpsync
   Db = Struct.new(:adapter, :username, :password, :host, :database)
