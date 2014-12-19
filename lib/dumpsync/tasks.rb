@@ -22,7 +22,7 @@ namespace :dump do
       raise "Remote adapter must be mysql2"
     end
 
-    file = dump_file
+    file = default_dump_file
     dump = `#{dump_cmd(remote_db, file)}`
 
     unless dump.strip.empty?
