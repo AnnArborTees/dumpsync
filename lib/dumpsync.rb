@@ -4,7 +4,7 @@ require 'dumpsync/railtie' if defined?(Rails::Railtie)
 module Dumpsync
   Db = Struct.new(:adapter, :username,
                   :password, :host, :database,
-                  :ignore_tables)
+                  :ignored_tables)
 
   def local_db
     @local_db ||= db_from('database.yml')
@@ -23,7 +23,7 @@ module Dumpsync
 
     "mysqldump --single-transaction -h #{db.host} "\
     "-u #{db.username} -p#{db.password} " +
-    db.ignore_tables.map(&ignore_table).join(' ') +
+    db.ignored_tables.map(&ignore_table).join(' ') +
     " #{db.database} > #{dump_file}"
   end
 
@@ -47,7 +47,7 @@ module Dumpsync
       config['password'],
       config['host'],
       config['database'],
-      config['ignore_tables'] || []
+      config['ignored_tables'] || []
     )
   end
 end

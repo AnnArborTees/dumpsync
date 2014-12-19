@@ -22,6 +22,9 @@ namespace :dump do
       raise "Remote adapter must be mysql2"
     end
 
+    STDOUT.puts "Running mysqldump on remote database..."
+    STDOUT.puts "Ignored tables: #{remote_db.ignored_tables}."
+
     file = default_dump_file
     dump = `#{dump_cmd(remote_db, file)}`
 
@@ -29,6 +32,7 @@ namespace :dump do
       raise "Failed to dump: #{dump}"
     end
 
+    STDOUT.puts "Loading data into local database..."
     sync = `#{sync_cmd(local_db, file)}`
 
     unless sync.strip.empty?
