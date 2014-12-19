@@ -22,20 +22,25 @@ namespace :dump do
       raise "Remote adapter must be mysql2"
     end
 
-    dump_file = "dumpsync-#{Time.now.strftime('%F')}.sql"
-    dump_cmd = "mysqldump --single-transaction -h #{remote_db.host} "\
-               "-u #{remote_db.username} -p#{remote_db.password} "\
-               "#{remote_db.database} > #{dump_file}"
-    dump = `#{dump_cmd}`
+    file = dump_file
+    dump = `#{dump_cmd(remote_db, file)}`
 
     unless dump.strip.empty?
       raise "Failed to dump: #{dump}"
     end
 
-    sync_cmd = "mysql -u #{local_db.username} -p#{local_db.password} "\
-               "#{local_db.database} < #{dump_file}"
-    sync = `#{sync_cmd}`
+    sync = `#{sync_cmd(local_db, file)}`
 
-    STDOUT.puts "I HAVE NO IDEA IF SUCCESS: #{sync}"
+    unless sync.strip.empty?
+      raise "Failed to sync: #{sync}"
+    end
+
+    begin
+      File.delete(file)
+      STDOUT.puts "Successfully synced with remote database!"
+    rescue StandardError => e
+      STDOUT.puts "Successfully synced, but got #{e.inspect} "\
+        "when trying to remove #{file}."
+    end
   end
 end
