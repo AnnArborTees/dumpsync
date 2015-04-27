@@ -41,10 +41,8 @@ namespace :dump do
 
     begin
       File.delete(file)
-      STDOUT.puts "Successfully synced with remote database!"
     rescue StandardError => e
-      STDOUT.puts "Successfully synced, but got #{e.inspect} "\
-        "when trying to remove #{file}."
+      STDOUT.puts "Error #{e} when trying to remove #{file}"
     end
   end
 end
