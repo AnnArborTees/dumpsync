@@ -21,8 +21,8 @@ module Dumpsync
       "--ignore-table=#{db.database}.#{table_name}"
     end
 
-    "mysqldump --single-transaction -h #{db.host} "\
-    "-u #{db.username} -p#{db.password} " +
+    "mysqldump --single-transaction -h #{db.host} " +
+    auth(db) +
     db.ignored_tables.map(&ignore_table).join(' ') +
     " #{db.database} > #{dump_file}"
   end
@@ -30,12 +30,18 @@ module Dumpsync
   def sync_cmd(db, dump_file = nil)
     dump_file ||= default_dump_file
 
-    "mysql -u #{db.username} -p#{db.password} "\
+    "mysql #{auth(db)} "\
     "#{db.database} < #{dump_file}"
   end
 
   def default_dump_file
     "dumpsync-#{Time.now.strftime('%F')}.sql"
+  end
+
+  def auth(db)
+    a = "-u #{db.username}"
+    a += " -p#{db.password}" unless db.password.nil? || db.password.empty?
+    a + ' '
   end
 
   def db_from(config_file)
