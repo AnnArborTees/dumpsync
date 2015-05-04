@@ -47,6 +47,9 @@ module Dumpsync
   def db_from(config_file)
     file   = File.read(File.join('config', config_file))
     config = YAML.load(ERB.new(file).result)[Rails.env.to_s]
+    if config.nil?
+      raise "Could not open config/#{config_file}"
+    end
     Db.new(
       config['adapter'],
       config['username'],
