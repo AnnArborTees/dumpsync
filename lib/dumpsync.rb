@@ -24,18 +24,17 @@ module Dumpsync
     "mysqldump --single-transaction -h #{db.host} " +
     auth(db) +
     db.ignored_tables.map(&ignore_table).join(' ') +
-    " #{db.database} > #{dump_file}"
+    " #{db.database} | gzip > #{dump_file}"
   end
 
   def sync_cmd(db, dump_file = nil)
     dump_file ||= default_dump_file
 
-    "mysql #{auth(db)} "\
-    "#{db.database} < #{dump_file}"
+    "gunzip < #{dump_file} | mysql #{auth(db)} #{db.database}"
   end
 
   def default_dump_file
-    "dumpsync-#{Time.now.strftime('%F')}.sql"
+    "dumpsync-#{Time.now.strftime('%F')}.sql.gz"
   end
 
   def auth(db)
