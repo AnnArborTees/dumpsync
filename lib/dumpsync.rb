@@ -30,7 +30,7 @@ module Dumpsync
   def sync_cmd(db, dump_file = nil)
     dump_file ||= default_dump_file
 
-    "gunzip < #{dump_file} | mysql #{auth(db)} #{db.database}"
+    "gunzip < #{dump_file} | mysql -h #{db.host} #{auth(db)} #{db.database}"
   end
 
   def default_dump_file
@@ -53,7 +53,7 @@ module Dumpsync
       config['adapter'],
       config['username'],
       config['password'],
-      config['host'],
+      config['host'] || '127.0.0.1',
       config['database'],
       config['ignored_tables'] || []
     )
