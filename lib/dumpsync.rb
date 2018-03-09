@@ -30,7 +30,12 @@ module Dumpsync
   def sync_cmd(db, dump_file = nil)
     dump_file ||= default_dump_file
 
-    "gunzip < #{dump_file} | mysql -h #{db.host} #{auth(db)} #{db.database}"
+    if db.host.starts_with?("172")
+      "gunzip < #{dump_file} | sudo docker exec -i rails-mysql mysql #{auth(db)} --database=#{db.database}"
+    else
+      "gunzip < #{dump_file} | mysql -h #{db.host} #{auth(db)} #{db.database}"
+    end
+
   end
 
   def default_dump_file
