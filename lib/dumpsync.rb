@@ -6,6 +6,51 @@ module Dumpsync
                   :password, :host, :database,
                   :ignored_tables)
 
+  def self.dump_sync!
+    config = ->(file) { File.join('config', file) }
+
+    unless File.exists? config['database.yml']
+      raise "Couldn't find database.yml."
+    end
+    unless File.exists? config['remote_database.yml']
+      raise "Couldn't find remote_database.yml"
+    end
+
+    unless local_db.adapter == 'mysql2'
+      raise "Local adapter must be mysql2"
+    end
+    unless remote_db.adapter == 'mysql2'
+      raise "Remote adapter must be mysql2"
+    end
+
+    STDOUT.puts "Running mysqldump on remote database..."
+    STDOUT.puts "Ignored tables: #{remote_db.ignored_tables}."
+
+    file = default_dump_file
+    cmd = dump_cmd(remote_db, file)
+    puts cmd
+    dump = `#{cmd}`
+
+    unless dump.strip.empty?
+      raise "Failed to dump: #{dump}"
+    end
+
+    STDOUT.puts "Loading data into local database..."
+    cmd = sync_cmd(local_db, file)
+    puts cmd
+    sync = `#{cmd}`
+
+    unless sync.strip.empty?
+      raise "Failed to sync: #{sync}"
+    end
+
+    begin
+      File.delete(file)
+    rescue StandardError => e
+      STDOUT.puts "Error #{e} when trying to remove #{file}"
+    end
+  end
+
   def local_db
     @local_db ||= db_from('database.yml')
   end
@@ -63,4 +108,6 @@ module Dumpsync
       config['ignored_tables'] || []
     )
   end
+
+  extend self
 end
