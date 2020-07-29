@@ -2,7 +2,7 @@
 
 Tool to download production data locally. 
 
-If you note one thing, note the ignored_tables. A lot of SoftWEAR-* Apps audit activities and warnings, both are significantly large databases with no warehousing system or deletion policies in place. 
+If you note one thing, note the ignored_tables. If your app audits activities or issues warnings, or retains task details you may want to ignore these/speed up download times. 
 
 ## Installation
 
@@ -18,16 +18,17 @@ And then execute:
 
 bundle exec rake dump:sync
 
-It'll download data as configured in config/remote_database.yml. We have a read-replica database set up, database details can be shared via LastPass. 
+It'll download data as configured in config/remote_database.yml. A read-replica database is recommended
 
 ```
 development:
   adapter: mysql2
-  host: db-rr.aatshirtco.com
-  database: softwear_crm
+  host: database-readreplica
+  database: readonly_database
   username: readonly
   password: READONLY PASSWORD HERE
   ignored_tables:
     - activities
     - warnings
+    - tasks
 ```
