@@ -1,29 +1,33 @@
 # Dumpsync
 
-TODO: Write a gem description
+Tool to download production data locally. 
+
+If you note one thing, note the ignored_tables. A lot of SoftWEAR-* Apps audit activities and warnings, both are significantly large databases with no warehousing system or deletion policies in place. 
 
 ## Installation
 
 Add this line to your application's Gemfile:
-
-    gem 'dumpsync'
-
+    
+  gem 'dumpsync', git: 'git://github.com/AnnArborTees/dumpsync.git'
+  
 And then execute:
 
     $ bundle
 
-Or install it yourself as:
-
-    $ gem install dumpsync
-
 ## Usage
 
-TODO: Write usage instructions here
+bundle exec rake dump:sync
 
-## Contributing
+It'll download data as configured in config/remote_database.yml. We have a read-replica database set up, database details can be shared via LastPass. 
 
-1. Fork it ( http://github.com/<my-github-username>/dumpsync/fork )
-2. Create your feature branch (`git checkout -b my-new-feature`)
-3. Commit your changes (`git commit -am 'Add some feature'`)
-4. Push to the branch (`git push origin my-new-feature`)
-5. Create new Pull Request
+```
+development:
+  adapter: mysql2
+  host: db-rr.aatshirtco.com
+  database: softwear_crm
+  username: readonly
+  password: READONLY PASSWORD HERE
+  ignored_tables:
+    - activities
+    - warnings
+```
