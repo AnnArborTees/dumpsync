@@ -66,7 +66,7 @@ module Dumpsync
       "--ignore-table=#{db.database}.#{table_name}"
     end
 
-    "mysqldump --single-transaction -h #{db.host} " +
+    "mysqldump --column-statistics=0 --single-transaction -h #{db.host} " +
     auth(db) +
     db.ignored_tables.map(&ignore_table).join(' ') +
     " #{db.database} | gzip > #{dump_file}"
