@@ -66,7 +66,7 @@ module Dumpsync
       "--ignore-table=#{db.database}.#{table_name}"
     end
 
-    "mysqldump --column-statistics=0 --single-transaction -h #{db.host} " +
+    "mysqldump --single-transaction -h #{db.host} " +
     auth(db) +
     db.ignored_tables.map(&ignore_table).join(' ') +
     " #{db.database} | gzip > #{dump_file}"
@@ -75,12 +75,8 @@ module Dumpsync
   def sync_cmd(db, dump_file = nil)
     dump_file ||= default_dump_file
 
-    if db.host.starts_with?("172")
-      "gunzip < #{dump_file} | sudo docker exec -i rails-mysql mysql #{auth(db)} --database=#{db.database}"
-    else
-      "gunzip < #{dump_file} | mysql -h #{db.host} #{auth(db)} #{db.database}"
-    end
 
+    "gunzip < #{dump_file} | mysql -h #{db.host} #{auth(db)} #{db.database}"
   end
 
   def default_dump_file
@@ -101,10 +97,10 @@ module Dumpsync
     end
     Db.new(
       config['adapter'],
-      config['username'],
-      config['password'],
-      config['host'] || '127.0.0.1',
-      config['database'],
+      (config['username'] ||= ENV['MYSQL_USERNAME']),
+      (config['password'] ||= ENV['MYSQL_ROOT_PASSWORD']),
+      (config['host'] ||= ENV['MYSQL_HOST']),
+      (config['database'] ||= ENV['MYSQL_DATABASE']),
       config['ignored_tables'] || []
     )
   end
