@@ -97,7 +97,7 @@ module Dumpsync
     end
     Db.new(
       config['adapter'],
-      (config['username'] ||= ENV['MYSQL_USERNAME']),
+      (config['username'] ||= ENV['MYSQL_USER']),
       (config['password'] ||= ENV['MYSQL_ROOT_PASSWORD']),
       (config['host'] ||= ENV['MYSQL_HOST']),
       (config['database'] ||= ENV['MYSQL_DATABASE']),
