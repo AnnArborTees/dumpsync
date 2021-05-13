@@ -84,7 +84,9 @@ module Dumpsync
   end
 
   def auth(db)
-    a = " -p#{db.password}" unless db.password.nil? || db.password.empty?
+    a = ''
+    a += "-u  #{db.username} " unless db.username.nil? || db.username.empty?
+    a += "-p#{db.password}" unless db.password.nil? || db.password.empty?
     a + ' '
   end
 
