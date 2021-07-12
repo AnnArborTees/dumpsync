@@ -96,14 +96,25 @@ module Dumpsync
     if config.nil?
       raise "Could not open config/#{config_file}"
     end
-    Db.new(
-      config['adapter'],
-      (config['username'] ||= ENV['MYSQL_USER']),
-      (config['password'] ||= ENV['MYSQL_ROOT_PASSWORD']),
-      (config['host'] ||= ENV['MYSQL_HOST']),
-      (config['database'] ||= ENV['MYSQL_DATABASE']),
-      config['ignored_tables'] || []
-    )
+    if config['primary'].present?
+      Db.new(
+        config['primary']['adapter'],
+        (config['primary']['username'] ||= ENV['MYSQL_USER']),
+        (config['primary']['password'] ||= ENV['MYSQL_ROOT_PASSWORD']),
+        (config['primary']['host'] ||= ENV['MYSQL_HOST']),
+        (config['primary']['database'] ||= ENV['MYSQL_DATABASE']),
+        config['ignored_tables'] || []
+      )
+    else
+      Db.new(
+        config['adapter'],
+        (config['username'] ||= ENV['MYSQL_USER']),
+        (config['password'] ||= ENV['MYSQL_ROOT_PASSWORD']),
+        (config['host'] ||= ENV['MYSQL_HOST']),
+        (config['database'] ||= ENV['MYSQL_DATABASE']),
+        config['ignored_tables'] || []
+      )
+    end
   end
 
   extend self
