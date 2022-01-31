@@ -1,3 +1,4 @@
+# RAILS 5 BRANCH
 require "dumpsync/version"
 require 'dumpsync/railtie' if defined?(Rails::Railtie)
 
