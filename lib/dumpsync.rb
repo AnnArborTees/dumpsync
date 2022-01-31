@@ -2,9 +2,9 @@ require "dumpsync/version"
 require 'dumpsync/railtie' if defined?(Rails::Railtie)
 
 module Dumpsync
-  Db = Struct.new(:adapter, :username,
-                  :password, :host, :database,
-                  :ignored_tables)
+  Db = Struct.new(
+    :adapter, :username, :password, :host, :database, :ignored_tables, :only_tables
+  )
 
   def self.dump_sync!
     config = ->(file) { File.join('config', file) }
@@ -16,59 +16,77 @@ module Dumpsync
       raise "Couldn't find remote_database.yml"
     end
 
-    unless local_db.adapter == 'mysql2'
-      raise "Local adapter must be mysql2"
+    remote_dbs.each do |key, remote_db|
+      next unless local_dbs[key].present?
+      
+      unless remote_db.adapter == "mysql2"
+        STDOUT.puts "Remote db for #{key} does not have mysql2 adapter. Skipping..."
+        next
+      end
+
+      unless local_dbs[key].adapter == 'mysql2'
+        STDOUT.puts "Local db for #{key} does not have mysql2 adapter. Skipping..."
+        next
+      end
+
+      STDOUT.puts "Running mysqldump on remote database #{key}"
+      if remote_db.only_tables.any?
+        STDOUT.puts "Only tables: #{remote_db.only_tables}."
+      else
+        STDOUT.puts "Ignored tables: #{remote_db.ignored_tables}."
+      end
+      
+      file = default_dump_file
+      cmd = dump_cmd(remote_db, file)
+      puts cmd
+      dump = `#{cmd}`
+
+      unless dump.strip.empty?
+        STDOUT.puts "Failed to dump: #{dump}"
+        next
+      end
+      
+      STDOUT.puts "Loading data into local database..."
+      
+      cmd = sync_cmd(local_db[key], file)
+      puts cmd
+      sync = `#{cmd}`
+
+      unless sync.strip.empty?
+        STDOUT.puts "Failed to sync: #{sync}"
+      end
+      
+      begin
+        File.delete(file)
+      rescue StandardError => e
+        STDOUT.puts "Error #{e} when trying to remove #{file}"
+      end
     end
-    unless remote_db.adapter == 'mysql2'
-      raise "Remote adapter must be mysql2"
-    end
 
-    STDOUT.puts "Running mysqldump on remote database..."
-    STDOUT.puts "Ignored tables: #{remote_db.ignored_tables}."
-
-    file = default_dump_file
-    cmd = dump_cmd(remote_db, file)
-    puts cmd
-    dump = `#{cmd}`
-
-    unless dump.strip.empty?
-      raise "Failed to dump: #{dump}"
-    end
-
-    STDOUT.puts "Loading data into local database..."
-    cmd = sync_cmd(local_db, file)
-    puts cmd
-    sync = `#{cmd}`
-
-    unless sync.strip.empty?
-      raise "Failed to sync: #{sync}"
-    end
-
-    begin
-      File.delete(file)
-    rescue StandardError => e
-      STDOUT.puts "Error #{e} when trying to remove #{file}"
-    end
+    STDOUT.puts "Finished dumping all databases"
   end
 
-  def local_db
-    @local_db ||= db_from('database.yml')
+  def local_dbs
+    @local_dbs ||= dbs_from('database.yml')
   end
 
-  def remote_db
-    @remote_db ||= db_from('remote_database.yml')
+  def remote_dbs
+    @remote_dbs ||= dbs_from('remote_database.yml')
   end
 
   def dump_cmd(db, dump_file = nil)
     dump_file ||= default_dump_file
-
+    
     ignore_table = lambda do |table_name|
       "--ignore-table=#{db.database}.#{table_name}"
     end
 
+    only_tables = db.only_tables.join(" ")
+
+    ignored_tables = db.ignored_tables.map(&ignore_table).join(' ')
+
     "mysqldump --single-transaction -h #{db.host} " +
-    auth(db) +
-    db.ignored_tables.map(&ignore_table).join(' ') +
+      auth(db) + (if db.only_tables.any? ? only_tables : ignored_tables) +
     " #{db.database} | gzip > #{dump_file}"
   end
 
@@ -90,31 +108,27 @@ module Dumpsync
     a + ' '
   end
 
-  def db_from(config_file)
+  def dbs_from(config_file)
     file   = File.read(File.join('config', config_file))
     config = YAML.load(ERB.new(file).result)[Rails.env.to_s]
     if config.nil?
       raise "Could not open config/#{config_file}"
     end
-    if config['primary'].present?
-      Db.new(
-        config['primary']['adapter'],
-        (config['primary']['username'] ||= ENV['MYSQL_USER']),
-        (config['primary']['password'] ||= ENV['MYSQL_ROOT_PASSWORD']),
-        (config['primary']['host'] ||= ENV['MYSQL_HOST']),
-        (config['primary']['database'] ||= ENV['MYSQL_DATABASE']),
-        config['ignored_tables'] || []
-      )
-    else
-      Db.new(
-        config['adapter'],
-        (config['username'] ||= ENV['MYSQL_USER']),
-        (config['password'] ||= ENV['MYSQL_ROOT_PASSWORD']),
-        (config['host'] ||= ENV['MYSQL_HOST']),
-        (config['database'] ||= ENV['MYSQL_DATABASE']),
-        config['ignored_tables'] || []
+    
+    dbs = {}
+    config.each do |db_config|
+      dbs[db_config] = Db.new(
+        db_config['adapter'],
+        (db_config['username'] ||= ENV['MYSQL_USER']),
+        (db_config['password'] ||= ENV['MYSQL_ROOT_PASSWORD']),
+        (db_config['host'] ||= ENV['MYSQL_HOST']),
+        (db_config['database'] ||= ENV['MYSQL_DATABASE']),
+        db_config['only_tables'] || [],
+        db_config['ignored_tables'] || []
       )
     end
+
+    dbs.with_indifferent_access
   end
 
   extend self
