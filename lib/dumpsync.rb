@@ -86,7 +86,7 @@ module Dumpsync
     ignored_tables = db.ignored_tables.map(&ignore_table).join(' ')
 
     "mysqldump --single-transaction -h #{db.host} " +
-      auth(db) + (if db.only_tables.any? ? only_tables : ignored_tables) +
+      auth(db) + (db.only_tables.any? ? only_tables : ignored_tables) +
     " #{db.database} | gzip > #{dump_file}"
   end
 
