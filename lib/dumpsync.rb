@@ -116,8 +116,8 @@ module Dumpsync
     end
     
     dbs = {}
-    config.each do |db_config|
-      dbs[db_config] = Db.new(
+    config.each do |key, db_config|
+      dbs[key] = Db.new(
         db_config['adapter'],
         (db_config['username'] ||= ENV['MYSQL_USER']),
         (db_config['password'] ||= ENV['MYSQL_ROOT_PASSWORD']),
