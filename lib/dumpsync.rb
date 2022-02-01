@@ -48,7 +48,7 @@ module Dumpsync
       
       STDOUT.puts "Loading data into local database..."
       
-      cmd = sync_cmd(local_db[key], file)
+      cmd = sync_cmd(local_dbs[key], file)
       puts cmd
       sync = `#{cmd}`
 
@@ -86,8 +86,8 @@ module Dumpsync
     ignored_tables = db.ignored_tables.map(&ignore_table).join(' ')
 
     "mysqldump --single-transaction -h #{db.host} " +
-      auth(db) + (db.only_tables.any? ? only_tables : ignored_tables) +
-    " #{db.database} | gzip > #{dump_file}"
+      auth(db) + "#{db.database}" + " " + (db.only_tables.any? ? only_tables : ignored_tables) +
+    " | gzip > #{dump_file}"
   end
 
   def sync_cmd(db, dump_file = nil)
@@ -123,8 +123,8 @@ module Dumpsync
         (db_config['password'] ||= ENV['MYSQL_ROOT_PASSWORD']),
         (db_config['host'] ||= ENV['MYSQL_HOST']),
         (db_config['database'] ||= ENV['MYSQL_DATABASE']),
-        db_config['only_tables'] || [],
-        db_config['ignored_tables'] || []
+        db_config['ignored_tables'] || [],
+        db_config['only_tables'] || []
       )
     end
 
