@@ -48,7 +48,7 @@ module Dumpsync
       
       STDOUT.puts "Loading data into local database..."
       
-      cmd = sync_cmd(local_db[key], file)
+      cmd = sync_cmd(local_dbs[key], file)
       puts cmd
       sync = `#{cmd}`
 
