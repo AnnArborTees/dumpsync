@@ -9,10 +9,10 @@ module Dumpsync
   def self.dump_sync!
     config = ->(file) { File.join('config', file) }
 
-    unless File.exists? config['database.yml']
+    unless File.exist? config['database.yml']
       raise "Couldn't find database.yml."
     end
-    unless File.exists? config['remote_database.yml']
+    unless File.exist? config['remote_database.yml']
       raise "Couldn't find remote_database.yml"
     end
 
