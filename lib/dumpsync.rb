@@ -110,7 +110,13 @@ module Dumpsync
 
   def dbs_from(config_file)
     file   = File.read(File.join('config', config_file))
-    config = YAML.load(ERB.new(file).result)[Rails.env.to_s]
+    
+    config = if Psych::VERSION > '4.0'
+      YAML.load(ERB.new(file).result, aliases: true)[Rails.env.to_s]
+    else 
+      YAML.load(ERB.new(file).result)[Rails.env.to_s]
+    end
+
     if config.nil?
       raise "Could not open config/#{config_file}"
     end
