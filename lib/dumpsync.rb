@@ -183,10 +183,12 @@ module Dumpsync
 
   def sanitizer_expression(db, table_name, column_name, strategy = :auto)
     data_type, = column_metadata(db, table_name, column_name)
-    email_expression = "CONCAT('email_', COALESCE(CAST(id AS CHAR), '0'), '@example.com')"
-    generic_text_expression = "CONCAT('#{column_name}_', COALESCE(CAST(id AS CHAR), '0'))"
+    row_identifier = row_identifier_expression(db, table_name)
+    email_expression = "CONCAT('email_', #{row_identifier}, '@example.com')"
+    generic_text_expression = "CONCAT('#{column_name}_', #{row_identifier})"
+    password_expression = "CONCAT('password_', #{row_identifier})"
 
-    return "'password123'" if strategy.to_s == 'password'
+    return password_expression if strategy.to_s == 'password'
     return email_expression if strategy.to_s == 'email'
 
     case data_type
@@ -230,6 +232,40 @@ module Dumpsync
     raise "Could not find metadata for #{table_name}.#{column_name}"
   end
 
+  def row_identifier_expression(db, table_name)
+    primary_key = primary_key_column(db, table_name)
+
+    if primary_key && valid_identifier?(primary_key)
+      return "COALESCE(CAST(#{quote_identifier(primary_key)} AS CHAR), '0')"
+    end
+
+    if column_exists?(db, table_name, 'id')
+      return "COALESCE(CAST(#{quote_identifier('id')} AS CHAR), '0')"
+    end
+
+    # Fallback for tables without a usable id-like key.
+    "REPLACE(UUID(), '-', '')"
+  end
+
+  def primary_key_column(db, table_name)
+    @primary_key_column_cache ||= {}
+    cache_key = "#{db.database}.#{table_name}"
+    return @primary_key_column_cache[cache_key] if @primary_key_column_cache.key?(cache_key)
+
+    sql = <<~SQL
+      SELECT COLUMN_NAME
+      FROM INFORMATION_SCHEMA.COLUMNS
+      WHERE TABLE_SCHEMA = '#{sql_literal(db.database)}'
+      AND TABLE_NAME = '#{sql_literal(table_name)}'
+      AND COLUMN_KEY = 'PRI'
+      ORDER BY ORDINAL_POSITION
+      LIMIT 1
+    SQL
+
+    column_name = query_value(db, sql, context: "primary key for #{table_name}")
+    @primary_key_column_cache[cache_key] = column_name
+  end
+
   def table_exists?(db, table_name)
     sql = <<~SQL
       SELECT 1
@@ -265,6 +301,19 @@ module Dumpsync
     end
 
     !output.strip.empty?
+  end
+
+  def query_value(db, sql, context:)
+    cmd = "mysql -N -B -h #{db.host} #{auth(db)} #{db.database} -e #{Shellwords.escape(sql)}"
+    output, status = Open3.capture2e(*shell_runner, cmd)
+
+    unless status.success?
+      STDOUT.puts "Could not query #{context}: #{output.strip}"
+      return nil
+    end
+
+    value = output.strip
+    value.empty? ? nil : value
   end
 
   def sql_literal(value)

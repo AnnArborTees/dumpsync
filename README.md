@@ -175,7 +175,7 @@ If `pv` is installed, dumpsync shows throughput and progress bars during dump an
 After import completes, dumpsync sanitizes configured local columns:
 
 - Columns flagged with `email: true` are set to `email_id@example.com`.
-- Columns flagged with `password: true` are set to `password123`.
+- Columns flagged with `password: true` are set to `password_<row-id>`.
 - Columns with `email` in their name default to the email format.
 - Other text-like columns become `column_name_id`.
 - Numeric columns become `0`.
