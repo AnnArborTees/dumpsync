@@ -181,3 +181,4 @@ After import completes, dumpsync sanitizes configured local columns:
 - Numeric columns become `0`.
 - Date/time columns use safe defaults.
 - JSON columns become `{}`.
+- If a configured table or column does not exist locally, dumpsync logs a skip message and continues.

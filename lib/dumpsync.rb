@@ -145,13 +145,30 @@ module Dumpsync
         next
       end
 
+      unless table_exists?(db, table_name)
+        STDOUT.puts "Skipping sanitize table that does not exist: #{table_name}"
+        next
+      end
+
       column_rules.each do |column_name, strategy|
         unless valid_identifier?(column_name)
           STDOUT.puts "Skipping sanitize column with invalid name: #{table_name}.#{column_name}"
           next
         end
 
-        sql = "UPDATE #{quote_identifier(table_name)} SET #{quote_identifier(column_name)} = #{sanitizer_expression(db, table_name, column_name, strategy)}"
+        unless column_exists?(db, table_name, column_name)
+          STDOUT.puts "Skipping sanitize column that does not exist: #{table_name}.#{column_name}"
+          next
+        end
+
+        begin
+          expression = sanitizer_expression(db, table_name, column_name, strategy)
+        rescue StandardError => e
+          STDOUT.puts "Skipping sanitize column #{table_name}.#{column_name}: #{e.message}"
+          next
+        end
+
+        sql = "UPDATE #{quote_identifier(table_name)} SET #{quote_identifier(column_name)} = #{expression}"
         run_mysql_sql!(db, sql)
         STDOUT.puts "Sanitized #{table_name}.#{column_name}"
       end
@@ -211,6 +228,47 @@ module Dumpsync
     return [parts[0], parts[1]] if parts.size == 2
 
     raise "Could not find metadata for #{table_name}.#{column_name}"
+  end
+
+  def table_exists?(db, table_name)
+    sql = <<~SQL
+      SELECT 1
+      FROM INFORMATION_SCHEMA.TABLES
+      WHERE TABLE_SCHEMA = '#{sql_literal(db.database)}'
+      AND TABLE_NAME = '#{sql_literal(table_name)}'
+      LIMIT 1
+    SQL
+
+    query_exists?(db, sql, context: "table #{table_name}")
+  end
+
+  def column_exists?(db, table_name, column_name)
+    sql = <<~SQL
+      SELECT 1
+      FROM INFORMATION_SCHEMA.COLUMNS
+      WHERE TABLE_SCHEMA = '#{sql_literal(db.database)}'
+      AND TABLE_NAME = '#{sql_literal(table_name)}'
+      AND COLUMN_NAME = '#{sql_literal(column_name)}'
+      LIMIT 1
+    SQL
+
+    query_exists?(db, sql, context: "column #{table_name}.#{column_name}")
+  end
+
+  def query_exists?(db, sql, context:)
+    cmd = "mysql -N -B -h #{db.host} #{auth(db)} #{db.database} -e #{Shellwords.escape(sql)}"
+    output, status = Open3.capture2e(*shell_runner, cmd)
+
+    unless status.success?
+      STDOUT.puts "Could not check #{context}: #{output.strip}"
+      return false
+    end
+
+    !output.strip.empty?
+  end
+
+  def sql_literal(value)
+    value.to_s.gsub("'", "''")
   end
 
   def valid_identifier?(name)
