@@ -28,6 +28,7 @@ development:
   username: readonly
   password: READONLY PASSWORD HERE
   ignored_tables:
+    - ar_internal_metadata
     - activities
     - warnings
     - tasks
@@ -151,6 +152,13 @@ DUMPSYNC_FAST_COMPRESSION=1 bundle exec rake dump:sync
 ```
 
 When available, this uses `pigz -1` (parallel gzip); otherwise it falls back to `gzip -1`.
+
+## Important Ignore Rule
+
+Always include `ar_internal_metadata` in `ignored_tables`.
+Rails uses this table to store internal key/value metadata for the current database, including the `environment` value.
+If you import production data for this table into development, your local database may now claim it is `production`.
+That causes Rails environment safety checks to fail (for example, environment mismatch errors on DB tasks like `db:drop`, `db:schema:load`, and similar commands), which makes local development workflows break.
 
 ## Progress Output
 
