@@ -162,6 +162,9 @@ That causes Rails environment safety checks to fail (for example, environment mi
 
 ## Progress Output
 
+By default, dumpsync now prints heartbeat status updates while long dump/load steps are running.
+This gives visibility even when byte-level tools are not installed.
+
 Enable stream progress with:
 
 ```
@@ -169,6 +172,12 @@ DUMPSYNC_PROGRESS=1 bundle exec rake dump:sync
 ```
 
 If `pv` is installed, dumpsync shows throughput and progress bars during dump and import.
+
+Optional: tune heartbeat interval (seconds):
+
+```
+DUMPSYNC_HEARTBEAT_SECONDS=10 bundle exec rake dump:sync
+```
 
 ## Sanitization Behavior
 

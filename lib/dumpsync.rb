@@ -122,16 +122,50 @@ module Dumpsync
   end
 
   def run_command!(cmd, phase:)
+    started_at = Time.now
+    STDOUT.puts "[dumpsync] #{phase} started"
+
     if progress_enabled?
       success = system(*shell_runner, cmd)
       raise "Failed to #{phase}" unless success
+      STDOUT.puts "[dumpsync] #{phase} finished in #{elapsed_seconds(started_at)}s"
       return
     end
 
-    output, status = Open3.capture2e(*shell_runner, cmd)
-    return if status.success?
+    success, output = run_command_with_heartbeat(cmd, phase, started_at)
+    if success
+      STDOUT.puts "[dumpsync] #{phase} finished in #{elapsed_seconds(started_at)}s"
+      return
+    end
 
     raise "Failed to #{phase}: #{output}"
+  end
+
+  def run_command_with_heartbeat(cmd, phase, started_at)
+    output = +''
+    status = nil
+
+    Open3.popen2e(*shell_runner, cmd) do |_stdin, stdout_and_stderr, wait_thread|
+      reader = Thread.new do
+        stdout_and_stderr.each_line do |line|
+          output << line
+        end
+      end
+
+      last_heartbeat = Time.now
+      while wait_thread.alive?
+        if Time.now - last_heartbeat >= heartbeat_interval_seconds
+          STDOUT.puts "[dumpsync] #{phase} still running (#{elapsed_seconds(started_at)}s elapsed)"
+          last_heartbeat = Time.now
+        end
+        sleep 1
+      end
+
+      status = wait_thread.value
+      reader.join
+    end
+
+    [status.success?, output]
   end
 
   def sanitize_local_data!(db, sanitize_tables)
@@ -379,6 +413,15 @@ module Dumpsync
     end
 
     format('%.2f %s', size, unit)
+  end
+
+  def elapsed_seconds(started_at)
+    (Time.now - started_at).to_i
+  end
+
+  def heartbeat_interval_seconds
+    value = ENV['DUMPSYNC_HEARTBEAT_SECONDS'].to_i
+    value > 0 ? value : 15
   end
 
   def dbs_from(config_file)
